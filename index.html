@@ -1,0 +1,83 @@
+function updateGame() {
+    if (!isGameRunning || isQuizActive) return;
+
+    // Player Bergerak Di Depan (Smooth Shift X)
+    playerGroup.position.x += (targetX - playerGroup.position.x) * 0.22;
+
+    // LOGIKA TERBANG & TURUN (PESAWAT)
+    if (isFlying) {
+        flyTimer -= 0.016; // Kurangi timer (~1 detik per 60 frame)
+        document.getElementById('jetpack-time').innerText = Math.ceil(flyTimer) + 's';
+
+        // Karakter Naik Melayang Ke Atas (Y = 6)
+        playerGroup.position.y += (6 - playerGroup.position.y) * 0.1;
+        policeGroup.position.y += (-2 - policeGroup.position.y) * 0.1;
+
+        // Jika waktu terbang habis -> Matikan Mode Terbang
+        if (flyTimer <= 0) {
+            isFlying = false;
+            document.getElementById('jetpack-hud').style.display = 'none';
+        }
+    } else {
+        // KARAKTER TURUN KEMBALI KE LANTAI (Y = 0)
+        playerGroup.position.y += (0 - playerGroup.position.y) * 0.1;
+        policeGroup.position.y += (0 - policeGroup.position.y) * 0.1;
+
+        // Polisi Mengejar Di Belakang Player
+        policeGroup.position.x += (playerGroup.position.x - policeGroup.position.x) * 0.15;
+        policeGroup.position.z = playerGroup.position.z + policeOffsetZ;
+
+        // Logika Lompat Normal
+        if (isJumping) {
+            playerGroup.position.y += jumpVelocity;
+            jumpVelocity -= 0.016;
+            if (playerGroup.position.y <= 0) {
+                playerGroup.position.y = 0;
+                isJumping = false;
+            }
+        }
+    }
+
+    // Pemulihan Jarak Polisi
+    if (isPoliceNear && !isFlying) {
+        policeRecoverTimer--;
+        if (policeRecoverTimer <= 0) {
+            isPoliceNear = false;
+            policeOffsetZ = 2.0;
+            document.getElementById('warning-tag').style.display = 'none';
+        }
+    }
+
+    // Slidng / Meluncur
+    const bodyMesh = playerGroup.getObjectByName("body");
+    if (isSliding && !isFlying) {
+        bodyMesh.scale.y = 0.5;
+        bodyMesh.position.y = 0.5;
+        slideTimer--;
+        if (slideTimer <= 0) {
+            isSliding = false;
+            bodyMesh.scale.y = 1.0;
+            bodyMesh.position.y = 1;
+        }
+    }
+
+    // Spawning Items
+    if (Math.random() < 0.02) spawnObstacle();
+    if (Math.random() < 0.04) spawnCoin(isFlying ? 6.0 : 1.0);
+    if (Math.random() < 0.005) spawnMysteryBox();
+    if (Math.random() < 0.002) spawnJetpack();
+
+    // Pergerakan Rintangan, Koin, dan Item
+    updateObstacles();
+    updateCoins();
+    updateJetpacks();
+    updateMysteryBoxes();
+
+    // Kamera Ikuti Player
+    camera.position.x = playerGroup.position.x * 0.4;
+    camera.position.y = 3.8 + (playerGroup.position.y * 0.4);
+
+    score += 1;
+    document.getElementById('score-val').innerText = score;
+    speed += 0.00004;
+}
